@@ -26,6 +26,21 @@ trait BN_Config
     }
 
     /**
+     * Expands or collapses the expansion panels.
+     *
+     * @param bool $State
+     * false =  collapse,
+     * true =   expand
+     * @return void
+     */
+    public function ExpandExpansionPanels(bool $State): void
+    {
+        for ($i = 1; $i <= 9; $i++) {
+            $this->UpdateFormField('Panel' . $i, 'expanded', $State);
+        }
+    }
+
+    /**
      * Modifies a configuration button.
      *
      * @param string $Field
@@ -36,7 +51,7 @@ trait BN_Config
     public function ModifyButton(string $Field, string $Caption, int $ObjectID): void
     {
         $state = false;
-        if ($ObjectID > 1 && @IPS_ObjectExists($ObjectID)) { //0 = main category, 1 = none
+        if ($ObjectID > 1 && @IPS_ObjectExists($ObjectID)) {
             $state = true;
         }
         $this->UpdateFormField($Field, 'caption', $Caption);
@@ -60,7 +75,7 @@ trait BN_Config
         if (array_key_exists(0, $primaryCondition)) {
             if (array_key_exists(0, $primaryCondition[0]['rules']['variable'])) {
                 $id = $primaryCondition[0]['rules']['variable'][0]['variableID'];
-                if ($id > 1 && @IPS_ObjectExists($id)) { //0 = main category, 1 = none
+                if ($id > 1 && @IPS_ObjectExists($id)) {
                     $state = true;
                 }
             }
@@ -82,30 +97,57 @@ trait BN_Config
 
         ########## Elements
 
+        //Configuration buttons
+        $form['elements'][0] =
+            [
+                'type'  => 'RowLayout',
+                'items' => [
+                    [
+                        'type'    => 'Button',
+                        'caption' => 'Konfiguration ausklappen',
+                        'onClick' => self::MODULE_PREFIX . '_ExpandExpansionPanels($id, true);'
+                    ],
+                    [
+                        'type'    => 'Button',
+                        'caption' => 'Konfiguration einklappen',
+                        'onClick' => self::MODULE_PREFIX . '_ExpandExpansionPanels($id, false);'
+                    ],
+                    [
+                        'type'    => 'Button',
+                        'caption' => 'Konfiguration neu laden',
+                        'onClick' => self::MODULE_PREFIX . '_ReloadConfig($id);'
+                    ]
+                ]
+            ];
+
         //Info
-        $form['elements'][0] = [
-            'type'    => 'ExpansionPanel',
-            'caption' => 'Info',
-            'items'   => [
+        $library = IPS_GetLibrary(self::LIBRARY_GUID);
+        $module = IPS_GetModule(self::MODULE_GUID);
+        $form['elements'][] = [
+            'type'     => 'ExpansionPanel',
+            'caption'  => 'Info',
+            'name'     => 'Panel1',
+            'expanded' => false,
+            'items'    => [
                 [
                     'type'    => 'Label',
-                    'name'    => 'ModuleID',
-                    'caption' => "ID:\t\t" . $this->InstanceID
+                    'caption' => "ID:\t\t\t" . $this->InstanceID
                 ],
                 [
                     'type'    => 'Label',
-                    'name'    => 'ModuleDesignation',
-                    'caption' => "Modul:\t" . self::MODULE_NAME
+                    'caption' => "Modul:\t\t" . $module['ModuleName']
                 ],
                 [
                     'type'    => 'Label',
-                    'name'    => 'ModulePrefix',
-                    'caption' => "Präfix:\t" . self::MODULE_PREFIX
+                    'caption' => "Präfix:\t\t" . $module['Prefix']
                 ],
                 [
                     'type'    => 'Label',
-                    'name'    => 'ModuleVersion',
-                    'caption' => "Version:\t" . self::MODULE_VERSION
+                    'caption' => "Version:\t\t" . $library['Version'] . '-' . $library['Build'] . ', ' . date('d.m.Y', $library['Date'])
+                ],
+                [
+                    'type'    => 'Label',
+                    'caption' => "Entwickler:\t" . $library['Author']
                 ],
                 [
                     'type'    => 'Label',
@@ -135,7 +177,7 @@ trait BN_Config
             }
             //Check conditions first
             $conditions = true;
-            if ($sensorID <= 1 || !@IPS_ObjectExists($sensorID)) { //0 = main category, 1 = none
+            if ($sensorID <= 1 || !@IPS_ObjectExists($sensorID)) {
                 $conditions = false;
             }
             if ($variable['SecondaryCondition'] != '') {
@@ -146,7 +188,7 @@ trait BN_Config
                         foreach ($rules as $rule) {
                             if (array_key_exists('variableID', $rule)) {
                                 $id = $rule['variableID'];
-                                if ($id <= 1 || !@IPS_ObjectExists($id)) { //0 = main category, 1 = none
+                                if ($id <= 1 || !@IPS_ObjectExists($id)) {
                                     $conditions = false;
                                 }
                             }
@@ -173,11 +215,13 @@ trait BN_Config
 
         $form['elements'][] = [
             'type'    => 'ExpansionPanel',
+            'name'    => 'Panel2',
             'caption' => 'Auslöser',
             'items'   => [
                 [
                     'type'     => 'List',
                     'name'     => 'TriggerList',
+                    'caption'  => 'Auslöser',
                     'rowCount' => 10,
                     'add'      => true,
                     'delete'   => true,
@@ -684,7 +728,7 @@ trait BN_Config
         foreach (json_decode($this->ReadPropertyString('WebFrontNotification'), true) as $element) {
             $rowColor = '#FFC0C0'; //red
             $id = $element['ID'];
-            if ($id > 1 && @IPS_ObjectExists($id)) { //0 = main category, 1 = none
+            if ($id > 1 && @IPS_ObjectExists($id)) {
                 $rowColor = '#C0FFC0'; //light green
                 if (!$element['Use']) {
                     $rowColor = '#DFDFDF'; //grey
@@ -693,19 +737,35 @@ trait BN_Config
             $webFrontNotificationValues[] = ['rowColor' => $rowColor];
         }
 
+        //WebFront push notification
+        $webFrontPushNotificationValues = [];
+        foreach (json_decode($this->ReadPropertyString('WebFrontPushNotification'), true) as $element) {
+            $rowColor = '#FFC0C0'; //red
+            $id = $element['ID'];
+            if ($id > 1 && @IPS_ObjectExists($id)) {
+                $rowColor = '#C0FFC0'; //light green
+                if (!$element['Use']) {
+                    $rowColor = '#DFDFDF'; //grey
+                }
+            }
+            $webFrontPushNotificationValues[] = ['rowColor' => $rowColor];
+        }
+
         $form['elements'][] = [
             'type'    => 'ExpansionPanel',
+            'name'    => 'Panel3',
             'caption' => 'Nachricht',
             'items'   => [
                 [
                     'type'    => 'Label',
-                    'caption' => 'Sendet eine Nachricht an das WebFront',
+                    'caption' => 'Nachricht',
                     'bold'    => true,
                     'italic'  => true
                 ],
                 [
                     'type'     => 'List',
                     'name'     => 'WebFrontNotification',
+                    'caption'  => 'Nachricht',
                     'rowCount' => 5,
                     'add'      => true,
                     'delete'   => true,
@@ -728,7 +788,7 @@ trait BN_Config
                             'caption' => 'WebFront',
                             'width'   => '300px',
                             'add'     => 0,
-                            'onClick' => self::MODULE_PREFIX . '_ModifyButton($id, "WebFrontNotificationConfigurationButton", "ID " . $WebFrontNotification["ID"] . " Instanzkonfiguration", $WebFrontNotification["ID"]);',
+                            'onClick' => self::MODULE_PREFIX . '_ModifyButton($id, "WebFrontNotificationConfigurationButton", "ID " . $WebFrontNotification["ID"] . " konfigurieren", $WebFrontNotification["ID"]);',
                             'edit'    => [
                                 'type'     => 'SelectModule',
                                 'moduleID' => self::WEBFRONT_MODULE_GUID
@@ -741,53 +801,37 @@ trait BN_Config
                     'type'  => 'RowLayout',
                     'items' => [
                         [
-                            'type'    => 'Button',
-                            'caption' => 'Neue Instanz erstellen',
-                            'onClick' => self::MODULE_PREFIX . '_CreateInstance($id, "WebFront");'
+                            'type'     => 'OpenObjectButton',
+                            'name'     => 'WebFrontNotificationConfigurationButton',
+                            'caption'  => 'Bearbeiten',
+                            'visible'  => false,
+                            'objectID' => 0
                         ],
                         [
                             'type'    => 'Label',
                             'caption' => ' '
                         ],
                         [
-                            'type'     => 'OpenObjectButton',
-                            'name'     => 'WebFrontNotificationConfigurationButton',
-                            'caption'  => 'Bearbeiten',
-                            'visible'  => false,
-                            'objectID' => 0
+                            'type'    => 'Button',
+                            'caption' => 'Neue Instanz erstellen',
+                            'onClick' => self::MODULE_PREFIX . '_CreateInstance($id, "WebFront");'
                         ]
                     ]
-                ]
-            ]
-        ];
-
-        //WebFront push notification
-        $webFrontPushNotificationValues = [];
-        foreach (json_decode($this->ReadPropertyString('WebFrontPushNotification'), true) as $element) {
-            $rowColor = '#FFC0C0'; //red
-            $id = $element['ID'];
-            if ($id > 1 && @IPS_ObjectExists($id)) { //0 = main category, 1 = none
-                $rowColor = '#C0FFC0'; //light green
-                if (!$element['Use']) {
-                    $rowColor = '#DFDFDF'; //grey
-                }
-            }
-            $webFrontPushNotificationValues[] = ['rowColor' => $rowColor];
-        }
-
-        $form['elements'][] = [
-            'type'    => 'ExpansionPanel',
-            'caption' => 'Push-Nachricht',
-            'items'   => [
+                ],
                 [
                     'type'    => 'Label',
-                    'caption' => 'Sendet eine Push-Nachricht an alle mobilen Geräte',
+                    'caption' => ' '
+                ],
+                [
+                    'type'    => 'Label',
+                    'caption' => 'Push-Nachricht',
                     'bold'    => true,
                     'italic'  => true
                 ],
                 [
                     'type'     => 'List',
                     'name'     => 'WebFrontPushNotification',
+                    'caption'  => 'Push-Nachricht',
                     'rowCount' => 5,
                     'add'      => true,
                     'delete'   => true,
@@ -810,7 +854,7 @@ trait BN_Config
                             'caption' => 'WebFront',
                             'width'   => '300px',
                             'add'     => 0,
-                            'onClick' => self::MODULE_PREFIX . '_ModifyButton($id, "WebFrontPushNotificationConfigurationButton", "ID " . $WebFrontPushNotification["ID"] . " Instanzkonfiguration", $WebFrontPushNotification["ID"]);',
+                            'onClick' => self::MODULE_PREFIX . '_ModifyButton($id, "WebFrontPushNotificationConfigurationButton", "ID " . $WebFrontPushNotification["ID"] . " konfigurieren", $WebFrontPushNotification["ID"]);',
                             'edit'    => [
                                 'type'     => 'SelectModule',
                                 'moduleID' => self::WEBFRONT_MODULE_GUID
@@ -823,20 +867,20 @@ trait BN_Config
                     'type'  => 'RowLayout',
                     'items' => [
                         [
-                            'type'    => 'Button',
-                            'caption' => 'Neue Instanz erstellen',
-                            'onClick' => self::MODULE_PREFIX . '_CreateInstance($id, "WebFrontPush");'
+                            'type'     => 'OpenObjectButton',
+                            'name'     => 'WebFrontPushNotificationConfigurationButton',
+                            'caption'  => 'Konfigurieren',
+                            'visible'  => false,
+                            'objectID' => 0
                         ],
                         [
                             'type'    => 'Label',
                             'caption' => ' '
                         ],
                         [
-                            'type'     => 'OpenObjectButton',
-                            'name'     => 'WebFrontPushNotificationConfigurationButton',
-                            'caption'  => 'Bearbeiten',
-                            'visible'  => false,
-                            'objectID' => 0
+                            'type'    => 'Button',
+                            'caption' => 'Neue Instanz erstellen',
+                            'onClick' => self::MODULE_PREFIX . '_CreateInstance($id, "WebFrontPush");'
                         ]
                     ]
                 ]
@@ -848,7 +892,7 @@ trait BN_Config
         foreach (json_decode($this->ReadPropertyString('Mailer'), true) as $element) {
             $rowColor = '#FFC0C0'; # red
             $id = $element['ID'];
-            if ($id > 1 && @IPS_ObjectExists($id)) { //0 = main category, 1 = none
+            if ($id > 1 && @IPS_ObjectExists($id)) {
                 $rowColor = '#C0FFC0'; # light green
                 if (!$element['Use']) {
                     $rowColor = '#DFDFDF'; # grey
@@ -859,17 +903,19 @@ trait BN_Config
 
         $form['elements'][] = [
             'type'    => 'ExpansionPanel',
+            'name'    => 'Panel4',
             'caption' => 'E-Mail',
             'items'   => [
                 [
                     'type'    => 'Label',
-                    'caption' => 'Sendet eine E-Mail an die Empfänger',
+                    'caption' => 'Mailer',
                     'bold'    => true,
                     'italic'  => true
                 ],
                 [
                     'type'     => 'List',
                     'name'     => 'Mailer',
+                    'caption'  => 'Mailer',
                     'rowCount' => 5,
                     'add'      => true,
                     'delete'   => true,
@@ -892,7 +938,7 @@ trait BN_Config
                             'caption' => 'Mailer',
                             'width'   => '300px',
                             'add'     => 0,
-                            'onClick' => self::MODULE_PREFIX . '_ModifyButton($id, "MailerConfigurationButton", "ID " . $Mailer["ID"] . " Instanzkonfiguration", $Mailer["ID"]);',
+                            'onClick' => self::MODULE_PREFIX . '_ModifyButton($id, "MailerConfigurationButton", "ID " . $Mailer["ID"] . " konfigurieren", $Mailer["ID"]);',
                             'edit'    => [
                                 'type'     => 'SelectModule',
                                 'moduleID' => self::MAILER_MODULE_GUID
@@ -905,20 +951,20 @@ trait BN_Config
                     'type'  => 'RowLayout',
                     'items' => [
                         [
-                            'type'    => 'Button',
-                            'caption' => 'Neue Instanz erstellen',
-                            'onClick' => self::MODULE_PREFIX . '_CreateInstance($id, "Mailer");'
+                            'type'     => 'OpenObjectButton',
+                            'name'     => 'MailerConfigurationButton',
+                            'caption'  => 'Konfigurieren',
+                            'visible'  => false,
+                            'objectID' => 0
                         ],
                         [
                             'type'    => 'Label',
                             'caption' => ' '
                         ],
                         [
-                            'type'     => 'OpenObjectButton',
-                            'name'     => 'MailerConfigurationButton',
-                            'caption'  => 'Bearbeiten',
-                            'visible'  => false,
-                            'objectID' => 0
+                            'type'    => 'Button',
+                            'caption' => 'Neue Instanz erstellen',
+                            'onClick' => self::MODULE_PREFIX . '_CreateInstance($id, "Mailer");'
                         ]
                     ]
                 ]
@@ -930,7 +976,7 @@ trait BN_Config
         foreach (json_decode($this->ReadPropertyString('NexxtMobile'), true) as $element) {
             $rowColor = '#FFC0C0'; # red
             $id = $element['ID'];
-            if ($id > 1 && @IPS_ObjectExists($id)) { //0 = main category, 1 = none
+            if ($id > 1 && @IPS_ObjectExists($id)) {
                 $rowColor = '#C0FFC0'; # light green
                 if (!$element['Use']) {
                     $rowColor = '#DFDFDF'; # grey
@@ -939,19 +985,35 @@ trait BN_Config
             $nexxtMobileValues[] = ['rowColor' => $rowColor];
         }
 
+        //SMS Sipgate
+        $sipgateValues = [];
+        foreach (json_decode($this->ReadPropertyString('Sipgate'), true) as $element) {
+            $rowColor = '#FFC0C0'; # red
+            $id = $element['ID'];
+            if ($id > 1 && @IPS_ObjectExists($id)) {
+                $rowColor = '#C0FFC0'; # light green
+                if (!$element['Use']) {
+                    $rowColor = '#DFDFDF'; # grey
+                }
+            }
+            $sipgateValues[] = ['rowColor' => $rowColor];
+        }
+
         $form['elements'][] = [
             'type'    => 'ExpansionPanel',
-            'caption' => 'SMS Nexxt Mobile',
+            'name'    => 'Panel5',
+            'caption' => 'SMS',
             'items'   => [
                 [
                     'type'    => 'Label',
-                    'caption' => 'Sendet eine SMS Nachricht via Nexxt Mobile',
+                    'caption' => 'Nexxt Mobile',
                     'bold'    => true,
                     'italic'  => true
                 ],
                 [
                     'type'     => 'List',
                     'name'     => 'NexxtMobile',
+                    'caption'  => 'NexxtMobile',
                     'rowCount' => 5,
                     'add'      => true,
                     'delete'   => true,
@@ -974,7 +1036,7 @@ trait BN_Config
                             'caption' => 'NeXXt Mobile',
                             'width'   => '300px',
                             'add'     => 0,
-                            'onClick' => self::MODULE_PREFIX . '_ModifyButton($id, "NexxtMobileConfigurationButton", "ID " . $NexxtMobile["ID"] . " Instanzkonfiguration", $NexxtMobile["ID"]);',
+                            'onClick' => self::MODULE_PREFIX . '_ModifyButton($id, "NexxtMobileConfigurationButton", "ID " . $NexxtMobile["ID"] . " konfigurieren", $NexxtMobile["ID"]);',
                             'edit'    => [
                                 'type'     => 'SelectModule',
                                 'moduleID' => self::NEXXTMOBILE_SMS_MODULE_GUID
@@ -987,53 +1049,37 @@ trait BN_Config
                     'type'  => 'RowLayout',
                     'items' => [
                         [
-                            'type'    => 'Button',
-                            'caption' => 'Neue Instanz erstellen',
-                            'onClick' => self::MODULE_PREFIX . '_CreateInstance($id, "SMSNexxtMobile");'
+                            'type'     => 'OpenObjectButton',
+                            'name'     => 'NexxtMobileConfigurationButton',
+                            'caption'  => 'Konfigurieren',
+                            'visible'  => false,
+                            'objectID' => 0
                         ],
                         [
                             'type'    => 'Label',
                             'caption' => ' '
                         ],
                         [
-                            'type'     => 'OpenObjectButton',
-                            'name'     => 'NexxtMobileConfigurationButton',
-                            'caption'  => 'Bearbeiten',
-                            'visible'  => false,
-                            'objectID' => 0
+                            'type'    => 'Button',
+                            'caption' => 'Neue Instanz erstellen',
+                            'onClick' => self::MODULE_PREFIX . '_CreateInstance($id, "SMSNexxtMobile");'
                         ]
                     ]
-                ]
-            ]
-        ];
-
-        //SMS Sipgate
-        $sipgateValues = [];
-        foreach (json_decode($this->ReadPropertyString('Sipgate'), true) as $element) {
-            $rowColor = '#FFC0C0'; # red
-            $id = $element['ID'];
-            if ($id > 1 && @IPS_ObjectExists($id)) { //0 = main category, 1 = none
-                $rowColor = '#C0FFC0'; # light green
-                if (!$element['Use']) {
-                    $rowColor = '#DFDFDF'; # grey
-                }
-            }
-            $sipgateValues[] = ['rowColor' => $rowColor];
-        }
-
-        $form['elements'][] = [
-            'type'    => 'ExpansionPanel',
-            'caption' => 'SMS Sipgate',
-            'items'   => [
+                ],
                 [
                     'type'    => 'Label',
-                    'caption' => 'Sendet eine SMS Nachricht via Sipgate',
+                    'caption' => ' '
+                ],
+                [
+                    'type'    => 'Label',
+                    'caption' => 'Sipgate',
                     'bold'    => true,
                     'italic'  => true
                 ],
                 [
                     'type'     => 'List',
                     'name'     => 'Sipgate',
+                    'caption'  => 'Sipgate',
                     'rowCount' => 5,
                     'add'      => true,
                     'delete'   => true,
@@ -1056,7 +1102,7 @@ trait BN_Config
                             'caption' => 'Sipgate',
                             'width'   => '300px',
                             'add'     => 0,
-                            'onClick' => self::MODULE_PREFIX . '_ModifyButton($id, "SipgateConfigurationButton", "ID " . $Sipgate["ID"] . " Instanzkonfiguration", $Sipgate["ID"]);',
+                            'onClick' => self::MODULE_PREFIX . '_ModifyButton($id, "SipgateConfigurationButton", "ID " . $Sipgate["ID"] . " konfigurieren", $Sipgate["ID"]);',
                             'edit'    => [
                                 'type'     => 'SelectModule',
                                 'moduleID' => self::SIPGATE_SMS_MODULE_GUID
@@ -1069,20 +1115,20 @@ trait BN_Config
                     'type'  => 'RowLayout',
                     'items' => [
                         [
-                            'type'    => 'Button',
-                            'caption' => 'Neue Instanz erstellen',
-                            'onClick' => self::MODULE_PREFIX . '_CreateInstance($id, "SMSSipgate");'
+                            'type'     => 'OpenObjectButton',
+                            'name'     => 'SipgateConfigurationButton',
+                            'caption'  => 'Konfigurieren',
+                            'visible'  => false,
+                            'objectID' => 0
                         ],
                         [
                             'type'    => 'Label',
                             'caption' => ' '
                         ],
                         [
-                            'type'     => 'OpenObjectButton',
-                            'name'     => 'SipgateConfigurationButton',
-                            'caption'  => 'Bearbeiten',
-                            'visible'  => false,
-                            'objectID' => 0
+                            'type'    => 'Button',
+                            'caption' => 'Neue Instanz erstellen',
+                            'onClick' => self::MODULE_PREFIX . '_CreateInstance($id, "SMSSipgate");'
                         ]
                     ]
                 ]
@@ -1094,7 +1140,7 @@ trait BN_Config
         foreach (json_decode($this->ReadPropertyString('Telegram'), true) as $element) {
             $rowColor = '#FFC0C0'; # red
             $id = $element['ID'];
-            if ($id > 1 && @IPS_ObjectExists($id)) { //0 = main category, 1 = none
+            if ($id > 1 && @IPS_ObjectExists($id)) {
                 $rowColor = '#C0FFC0'; # light green
                 if (!$element['Use']) {
                     $rowColor = '#DFDFDF'; # grey
@@ -1105,17 +1151,19 @@ trait BN_Config
 
         $form['elements'][] = [
             'type'    => 'ExpansionPanel',
+            'name'    => 'Panel6',
             'caption' => 'Telegram',
             'items'   => [
                 [
                     'type'    => 'Label',
-                    'caption' => 'Sendet eine Nachricht via Telegram',
+                    'caption' => 'Telegram',
                     'bold'    => true,
                     'italic'  => true
                 ],
                 [
                     'type'     => 'List',
                     'name'     => 'Telegram',
+                    'caption'  => 'Telegram',
                     'rowCount' => 5,
                     'add'      => true,
                     'delete'   => true,
@@ -1138,7 +1186,7 @@ trait BN_Config
                             'caption' => 'Telegram Bot',
                             'width'   => '300px',
                             'add'     => 0,
-                            'onClick' => self::MODULE_PREFIX . '_ModifyButton($id, "TelegramConfigurationButton", "ID " . $Telegram["ID"] . " Instanzkonfiguration", $Telegram["ID"]);',
+                            'onClick' => self::MODULE_PREFIX . '_ModifyButton($id, "TelegramConfigurationButton", "ID " . $Telegram["ID"] . " konfigurieren", $Telegram["ID"]);',
                             'edit'    => [
                                 'type'     => 'SelectModule',
                                 'moduleID' => self::TELEGRAM_BOT_MODULE_GUID
@@ -1151,20 +1199,20 @@ trait BN_Config
                     'type'  => 'RowLayout',
                     'items' => [
                         [
-                            'type'    => 'Button',
-                            'caption' => 'Neue Instanz erstellen',
-                            'onClick' => self::MODULE_PREFIX . '_CreateInstance($id, "TelegramBot");'
+                            'type'     => 'OpenObjectButton',
+                            'name'     => 'TelegramConfigurationButton',
+                            'caption'  => 'Konfigurieren',
+                            'visible'  => false,
+                            'objectID' => 0
                         ],
                         [
                             'type'    => 'Label',
                             'caption' => ' '
                         ],
                         [
-                            'type'     => 'OpenObjectButton',
-                            'name'     => 'TelegramConfigurationButton',
-                            'caption'  => 'Bearbeiten',
-                            'visible'  => false,
-                            'objectID' => 0
+                            'type'    => 'Button',
+                            'caption' => 'Neue Instanz erstellen',
+                            'onClick' => self::MODULE_PREFIX . '_CreateInstance($id, "TelegramBot");'
                         ]
                     ]
                 ]
@@ -1174,17 +1222,13 @@ trait BN_Config
         //Visualisation
         $form['elements'][] = [
             'type'    => 'ExpansionPanel',
+            'name'    => 'Panel7',
             'caption' => 'Visualisierung',
             'items'   => [
                 [
                     'type'    => 'Label',
-                    'caption' => 'WebFront',
+                    'caption' => 'Aktiv',
                     'bold'    => true,
-                    'italic'  => true
-                ],
-                [
-                    'type'    => 'Label',
-                    'caption' => 'Anzeigeoptionen',
                     'italic'  => true
                 ],
                 [
@@ -1197,28 +1241,17 @@ trait BN_Config
 
         ########## Actions
 
-        $form['actions'][] = [
-            'type'    => 'ExpansionPanel',
-            'caption' => 'Konfiguration',
-            'items'   => [
-                [
-                    'type'    => 'Button',
-                    'caption' => 'Neu laden',
-                    'onClick' => self::MODULE_PREFIX . '_ReloadConfig($id);'
-                ]
-            ]
-        ];
-
         //Test center
-        $form['actions'][] = [
-            'type'    => 'ExpansionPanel',
-            'caption' => 'Schaltfunktionen',
-            'items'   => [
-                [
-                    'type' => 'TestCenter',
-                ]
-            ]
-        ];
+        $form['actions'][] =
+            [
+                'type' => 'TestCenter'
+            ];
+
+        $form['actions'][] =
+            [
+                'type'    => 'Label',
+                'caption' => ' '
+            ];
 
         //Registered references
         $registeredReferences = [];
@@ -1235,44 +1268,6 @@ trait BN_Config
                 'Name'     => $name,
                 'rowColor' => $rowColor];
         }
-
-        $form['actions'][] = [
-            'type'    => 'ExpansionPanel',
-            'caption' => 'Registrierte Referenzen',
-            'items'   => [
-                [
-                    'type'     => 'List',
-                    'name'     => 'RegisteredReferences',
-                    'rowCount' => 10,
-                    'sort'     => [
-                        'column'    => 'ObjectID',
-                        'direction' => 'ascending'
-                    ],
-                    'columns' => [
-                        [
-                            'caption' => 'ID',
-                            'name'    => 'ObjectID',
-                            'width'   => '150px',
-                            'onClick' => self::MODULE_PREFIX . '_ModifyButton($id, "RegisteredReferencesConfigurationButton", "ID " . $RegisteredReferences["ObjectID"] . " aufrufen", $RegisteredReferences["ObjectID"]);'
-                        ],
-                        [
-                            'caption' => 'Name',
-                            'name'    => 'Name',
-                            'width'   => '300px',
-                            'onClick' => self::MODULE_PREFIX . '_ModifyButton($id, "RegisteredReferencesConfigurationButton", "ID " . $RegisteredReferences["ObjectID"] . " aufrufen", $RegisteredReferences["ObjectID"]);'
-                        ]
-                    ],
-                    'values' => $registeredReferences
-                ],
-                [
-                    'type'     => 'OpenObjectButton',
-                    'name'     => 'RegisteredReferencesConfigurationButton',
-                    'caption'  => 'Aufrufen',
-                    'visible'  => false,
-                    'objectID' => 0
-                ]
-            ]
-        ];
 
         //Registered messages
         $registeredMessages = [];
@@ -1306,11 +1301,48 @@ trait BN_Config
 
         $form['actions'][] = [
             'type'    => 'ExpansionPanel',
-            'caption' => 'Registrierte Nachrichten',
+            'caption' => 'Entwicklerbereich',
             'items'   => [
                 [
                     'type'     => 'List',
+                    'name'     => 'RegisteredReferences',
+                    'caption'  => 'Registrierte Referenzen',
+                    'rowCount' => 10,
+                    'sort'     => [
+                        'column'    => 'ObjectID',
+                        'direction' => 'ascending'
+                    ],
+                    'columns' => [
+                        [
+                            'caption' => 'ID',
+                            'name'    => 'ObjectID',
+                            'width'   => '150px',
+                            'onClick' => self::MODULE_PREFIX . '_ModifyButton($id, "RegisteredReferencesConfigurationButton", "ID " . $RegisteredReferences["ObjectID"] . " aufrufen", $RegisteredReferences["ObjectID"]);'
+                        ],
+                        [
+                            'caption' => 'Name',
+                            'name'    => 'Name',
+                            'width'   => '300px',
+                            'onClick' => self::MODULE_PREFIX . '_ModifyButton($id, "RegisteredReferencesConfigurationButton", "ID " . $RegisteredReferences["ObjectID"] . " aufrufen", $RegisteredReferences["ObjectID"]);'
+                        ]
+                    ],
+                    'values' => $registeredReferences
+                ],
+                [
+                    'type'     => 'OpenObjectButton',
+                    'name'     => 'RegisteredReferencesConfigurationButton',
+                    'caption'  => 'Aufrufen',
+                    'visible'  => false,
+                    'objectID' => 0
+                ],
+                [
+                    'type'    => 'Label',
+                    'caption' => ' '
+                ],
+                [
+                    'type'     => 'List',
                     'name'     => 'RegisteredMessages',
+                    'caption'  => 'Registrierte Nachrichten',
                     'rowCount' => 10,
                     'sort'     => [
                         'column'    => 'ObjectID',
@@ -1352,27 +1384,46 @@ trait BN_Config
             ]
         ];
 
+        //Dummy info message
+        $form['actions'][] =
+            [
+                'type'    => 'PopupAlert',
+                'name'    => 'InfoMessage',
+                'visible' => false,
+                'popup'   => [
+                    'closeCaption' => 'OK',
+                    'items'        => [
+                        [
+                            'type'    => 'Label',
+                            'name'    => 'InfoMessageLabel',
+                            'caption' => '',
+                            'visible' => true
+                        ]
+                    ]
+                ]
+            ];
+
         ########## Status
 
         $form['status'][] = [
             'code'    => 101,
             'icon'    => 'active',
-            'caption' => self::MODULE_NAME . ' wird erstellt',
+            'caption' => $module['ModuleName'] . ' wird erstellt',
         ];
         $form['status'][] = [
             'code'    => 102,
             'icon'    => 'active',
-            'caption' => self::MODULE_NAME . ' ist aktiv',
+            'caption' => $module['ModuleName'] . ' ist aktiv',
         ];
         $form['status'][] = [
             'code'    => 103,
             'icon'    => 'active',
-            'caption' => self::MODULE_NAME . ' wird gelöscht',
+            'caption' => $module['ModuleName'] . ' wird gelöscht',
         ];
         $form['status'][] = [
             'code'    => 104,
             'icon'    => 'inactive',
-            'caption' => self::MODULE_NAME . ' ist inaktiv',
+            'caption' => $module['ModuleName'] . ' ist inaktiv',
         ];
         $form['status'][] = [
             'code'    => 200,
