@@ -9,7 +9,6 @@
  */
 
 /** @noinspection PhpUndefinedFunctionInspection */
-/** @noinspection PhpUnused */
 
 declare(strict_types=1);
 
@@ -73,7 +72,7 @@ trait BN_TriggerCondition
                                 }
                                 //Create message text
                                 $triggeringDetector = $variable['TriggeringDetector'];
-                                if ($triggeringDetector > 1 && @IPS_ObjectExists($triggeringDetector)) { //0 = main category, 1 = none
+                                if ($triggeringDetector > 1 && @IPS_ObjectExists($triggeringDetector)) {
                                     $messageText = sprintf($messageText, GetValueString($triggeringDetector));
                                 }
                                 $this->SendDebug(__FUNCTION__, 'Nachricht: ' . $messageText, 0);

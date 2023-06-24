@@ -24,9 +24,9 @@ class Benachrichtigung extends IPSModule
     use BN_TriggerCondition;
 
     //Constants
-    private const MODULE_NAME = 'Benachrichtigung';
+    private const LIBRARY_GUID = '{76D34084-7695-02EF-DAA8-82041E08AB72}';
+    private const MODULE_GUID = '{BDAB70AA-B45D-4CB4-3D65-509CFF0969F9}';
     private const MODULE_PREFIX = 'BN';
-    private const MODULE_VERSION = '7.0-1, 08.09.2022';
     private const WEBFRONT_MODULE_GUID = '{3565B1F2-8F7B-4311-A4B6-1BF1D868F39E}';
     private const MAILER_MODULE_GUID = '{C6CF3C5C-E97B-97AB-ADA2-E834976C6A92}';
     private const NEXXTMOBILE_SMS_MODULE_GUID = '{7E6DBE40-4438-ABB7-7EE0-93BC4F1AF0CE}';
@@ -99,7 +99,7 @@ class Benachrichtigung extends IPSModule
                 if (array_key_exists(0, $primaryCondition)) {
                     if (array_key_exists(0, $primaryCondition[0]['rules']['variable'])) {
                         $id = $primaryCondition[0]['rules']['variable'][0]['variableID'];
-                        if ($id > 1 && @IPS_ObjectExists($id)) { //0 = main category, 1 = none
+                        if ($id > 1 && @IPS_ObjectExists($id)) {
                             $this->RegisterReference($id);
                             $this->RegisterMessage($id, VM_UPDATE);
                         }
@@ -115,7 +115,7 @@ class Benachrichtigung extends IPSModule
                         foreach ($rules as $rule) {
                             if (array_key_exists('variableID', $rule)) {
                                 $id = $rule['variableID'];
-                                if ($id > 1 && @IPS_ObjectExists($id)) { //0 = main category, 1 = none
+                                if ($id > 1 && @IPS_ObjectExists($id)) {
                                     $this->RegisterReference($id);
                                 }
                             }
@@ -134,7 +134,7 @@ class Benachrichtigung extends IPSModule
                     continue;
                 }
                 $id = $variable['ID'];
-                if ($id > 1 && @IPS_ObjectExists($id)) { //0 = main category, 1 = none
+                if ($id > 1 && @IPS_ObjectExists($id)) {
                     $this->RegisterReference($id);
                 }
             }
@@ -215,10 +215,12 @@ class Benachrichtigung extends IPSModule
         $id = @IPS_CreateInstance($guid);
         if (is_int($id)) {
             IPS_SetName($id, 'Mailer');
-            echo 'Instanz mit der ID ' . $id . ' wurde erfolgreich erstellt!';
+            $infoText = 'Instanz mit der ID ' . $id . ' wurde erfolgreich erstellt!';
         } else {
-            echo 'Instanz konnte nicht erstellt werden!';
+            $infoText = 'Instanz konnte nicht erstellt werden!';
         }
+        $this->UpdateFormField('InfoMessage', 'visible', true);
+        $this->UpdateFormField('InfoMessageLabel', 'caption', $infoText);
     }
 
     #################### Request Action
