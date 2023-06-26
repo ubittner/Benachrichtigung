@@ -1226,12 +1226,6 @@ trait BN_Config
             'caption' => 'Visualisierung',
             'items'   => [
                 [
-                    'type'    => 'Label',
-                    'caption' => 'Aktiv',
-                    'bold'    => true,
-                    'italic'  => true
-                ],
-                [
                     'type'    => 'CheckBox',
                     'name'    => 'EnableActive',
                     'caption' => 'Aktiv'
