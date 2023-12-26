@@ -1,19 +1,19 @@
 <?php
 
 /**
- * @project       Benachrichtigung/Benachrichtigung
- * @file          BN_Config.php
+ * @project       Benachrichtigung/Benachrichtigung/helper/
+ * @file          BN_ConfigurationForm.php
  * @author        Ulrich Bittner
- * @copyright     2022 Ulrich Bittner
+ * @copyright     2023 Ulrich Bittner
  * @license       https://creativecommons.org/licenses/by-nc-sa/4.0/ CC BY-NC-SA 4.0
  */
 
-/** @noinspection PhpUndefinedFunctionInspection */
+/** @noinspection SpellCheckingInspection */
 /** @noinspection DuplicatedCode */
 
 declare(strict_types=1);
 
-trait BN_Config
+trait BN_ConfigurationForm
 {
     /**
      * Reloads the configuration form.
@@ -35,7 +35,7 @@ trait BN_Config
      */
     public function ExpandExpansionPanels(bool $State): void
     {
-        for ($i = 1; $i <= 9; $i++) {
+        for ($i = 1; $i <= 8; $i++) {
             $this->UpdateFormField('Panel' . $i, 'expanded', $State);
         }
     }
@@ -57,6 +57,17 @@ trait BN_Config
         $this->UpdateFormField($Field, 'caption', $Caption);
         $this->UpdateFormField($Field, 'visible', $state);
         $this->UpdateFormField($Field, 'objectID', $ObjectID);
+    }
+
+    public function ModifyActualVariableStatesConfigurationButton(string $Field, int $VariableID): void
+    {
+        $state = false;
+        if ($VariableID > 1 && @IPS_ObjectExists($VariableID)) {
+            $state = true;
+        }
+        $this->UpdateFormField($Field, 'caption', 'ID ' . $VariableID . ' Bearbeiten');
+        $this->UpdateFormField($Field, 'visible', $state);
+        $this->UpdateFormField($Field, 'objectID', $VariableID);
     }
 
     /**
@@ -163,66 +174,116 @@ trait BN_Config
         ];
 
         //Trigger list
-        $triggerListValues = [];
-        $variables = json_decode($this->ReadPropertyString('TriggerList'), true);
-        foreach ($variables as $variable) {
-            $sensorID = 0;
-            if ($variable['PrimaryCondition'] != '') {
-                $primaryCondition = json_decode($variable['PrimaryCondition'], true);
-                if (array_key_exists(0, $primaryCondition)) {
-                    if (array_key_exists(0, $primaryCondition[0]['rules']['variable'])) {
-                        $sensorID = $primaryCondition[0]['rules']['variable'][0]['variableID'];
-                    }
-                }
-            }
-            //Check conditions first
-            $conditions = true;
-            if ($sensorID <= 1 || !@IPS_ObjectExists($sensorID)) {
-                $conditions = false;
-            }
-            if ($variable['SecondaryCondition'] != '') {
-                $secondaryConditions = json_decode($variable['SecondaryCondition'], true);
-                if (array_key_exists(0, $secondaryConditions)) {
-                    if (array_key_exists('rules', $secondaryConditions[0])) {
-                        $rules = $secondaryConditions[0]['rules']['variable'];
-                        foreach ($rules as $rule) {
-                            if (array_key_exists('variableID', $rule)) {
-                                $id = $rule['variableID'];
-                                if ($id <= 1 || !@IPS_ObjectExists($id)) {
-                                    $conditions = false;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            $stateName = 'fehlerhaft';
-            $rowColor = '#FFC0C0'; //red
-            if ($conditions) {
-                $stateName = 'Bedingung nicht erfüllt!';
-                $rowColor = '#C0C0FF'; //violett
-                if (IPS_IsConditionPassing($variable['PrimaryCondition']) && IPS_IsConditionPassing($variable['SecondaryCondition'])) {
-                    $stateName = 'Bedingung erfüllt';
-                    $rowColor = '#C0FFC0'; //light green
-                }
-                if (!$variable['Use']) {
-                    $stateName = 'Deaktiviert';
-                    $rowColor = '#DFDFDF'; //grey
-                }
-            }
-            $triggerListValues[] = ['ActualStatus' => $stateName, 'SensorID' => $sensorID, 'rowColor' => $rowColor];
-        }
-
         $form['elements'][] = [
             'type'    => 'ExpansionPanel',
             'name'    => 'Panel2',
             'caption' => 'Auslöser',
             'items'   => [
                 [
+                    'type'    => 'PopupButton',
+                    'caption' => 'Aktueller Status',
+                    'popup'   => [
+                        'caption' => 'Aktueller Status',
+                        'items'   => [
+                            [
+                                'type'     => 'List',
+                                'name'     => 'ActualVariableStateList',
+                                'caption'  => 'Variablen',
+                                'add'      => false,
+                                'rowCount' => 1,
+                                'sort'     => [
+                                    'column'    => 'ActualStatus',
+                                    'direction' => 'ascending'
+                                ],
+                                'columns' => [
+                                    [
+                                        'name'    => 'ActualStatus',
+                                        'caption' => 'Aktueller Status',
+                                        'width'   => '250px',
+                                        'save'    => false
+                                    ],
+                                    [
+                                        'name'    => 'SensorID',
+                                        'caption' => 'ID',
+                                        'width'   => '80px',
+                                        'onClick' => self::MODULE_PREFIX . '_ModifyActualVariableStatesConfigurationButton($id, "ActualVariableStateConfigurationButton", $ActualVariableStateList["SensorID"]);',
+                                        'save'    => false
+                                    ],
+                                    [
+                                        'name'    => 'Designation',
+                                        'caption' => 'Bezeichnung',
+                                        'width'   => '400px',
+                                        'save'    => false
+                                    ],
+                                    [
+                                        'name'    => 'UseWebFrontNotification',
+                                        'caption' => 'Nachricht',
+                                        'width'   => '150px',
+                                        'save'    => false,
+                                        'edit'    => [
+                                            'type' => 'CheckBox'
+                                        ]
+                                    ],
+                                    [
+                                        'name'    => 'UseWebFrontPushNotification',
+                                        'caption' => 'Push-Nachricht',
+                                        'width'   => '150px',
+                                        'save'    => false,
+                                        'edit'    => [
+                                            'type' => 'CheckBox'
+                                        ]
+                                    ],
+                                    [
+                                        'name'    => 'UseMailer',
+                                        'caption' => 'E-Mail',
+                                        'width'   => '150px',
+                                        'save'    => false,
+                                        'edit'    => [
+                                            'type' => 'CheckBox'
+                                        ]
+                                    ],
+                                    [
+                                        'name'    => 'UseSMS',
+                                        'caption' => 'SMS',
+                                        'width'   => '150px',
+                                        'save'    => false,
+                                        'edit'    => [
+                                            'type' => 'CheckBox'
+                                        ]
+                                    ],
+                                    [
+                                        'name'    => 'UseTelegram',
+                                        'caption' => 'Telegram',
+                                        'width'   => '150px',
+                                        'save'    => false,
+                                        'edit'    => [
+                                            'type' => 'CheckBox'
+                                        ]
+                                    ],
+                                    [
+                                        'name'    => 'LastUpdate',
+                                        'caption' => 'Letzte Aktualisierung',
+                                        'width'   => '200px',
+                                        'save'    => false
+                                    ]
+                                ]
+                            ],
+                            [
+                                'type'     => 'OpenObjectButton',
+                                'name'     => 'ActualVariableStateConfigurationButton',
+                                'caption'  => 'Bearbeiten',
+                                'visible'  => false,
+                                'objectID' => 0
+                            ]
+                        ]
+                    ],
+                    'onClick' => self::MODULE_PREFIX . '_GetActualVariableStates($id);'
+                ],
+                [
                     'type'     => 'List',
                     'name'     => 'TriggerList',
                     'caption'  => 'Auslöser',
-                    'rowCount' => 10,
+                    'rowCount' => $this->GetRowAmount('TriggerList'),
                     'add'      => true,
                     'delete'   => true,
                     'columns'  => [
@@ -236,19 +297,6 @@ trait BN_Config
                             ]
                         ],
                         [
-                            'name'    => 'ActualStatus',
-                            'caption' => 'Aktueller Status',
-                            'width'   => '200px',
-                            'add'     => ''
-                        ],
-                        [
-                            'caption' => 'ID',
-                            'name'    => 'SensorID',
-                            'onClick' => self::MODULE_PREFIX . '_ModifyTriggerListButton($id, "TriggerListConfigurationButton", $TriggerList["PrimaryCondition"]);',
-                            'width'   => '100px',
-                            'add'     => ''
-                        ],
-                        [
                             'caption' => 'Bezeichnung',
                             'name'    => 'Designation',
                             'onClick' => self::MODULE_PREFIX . '_ModifyTriggerListButton($id, "TriggerListConfigurationButton", $TriggerList["PrimaryCondition"]);',
@@ -256,27 +304,6 @@ trait BN_Config
                             'add'     => '',
                             'edit'    => [
                                 'type' => 'ValidationTextBox'
-                            ]
-                        ],
-                        [
-                            'caption' => ' ',
-                            'name'    => 'SpacerPrimaryCondition',
-                            'width'   => '200px',
-                            'add'     => '',
-                            'visible' => false,
-                            'edit'    => [
-                                'type' => 'Label'
-                            ]
-                        ],
-                        [
-                            'caption' => 'Bedingung:',
-                            'name'    => 'LabelPrimaryCondition',
-                            'width'   => '200px',
-                            'add'     => '',
-                            'visible' => false,
-                            'edit'    => [
-                                'type' => 'Label',
-                                'bold' => true
                             ]
                         ],
                         [
@@ -289,74 +316,29 @@ trait BN_Config
                             ]
                         ],
                         [
-                            'caption' => ' ',
+                            'caption' => 'Primäre Bedingung',
                             'name'    => 'PrimaryCondition',
-                            'width'   => '200px',
+                            'width'   => '1000px',
                             'add'     => '',
-                            'visible' => false,
                             'edit'    => [
                                 'type' => 'SelectCondition'
                             ]
                         ],
                         [
-                            'caption' => ' ',
-                            'name'    => 'SpacerSecondaryCondition',
-                            'width'   => '200px',
-                            'add'     => '',
-                            'visible' => false,
-                            'edit'    => [
-                                'type' => 'Label'
-                            ]
-                        ],
-                        [
-                            'caption' => 'Weitere Bedingung(en):',
-                            'name'    => 'LabelSecondaryCondition',
-                            'width'   => '200px',
-                            'add'     => '',
-                            'visible' => false,
-                            'edit'    => [
-                                'type' => 'Label',
-                                'bold' => true
-                            ]
-                        ],
-                        [
-                            'caption' => ' ',
+                            'caption' => 'Weitere Bedingungen',
                             'name'    => 'SecondaryCondition',
-                            'width'   => '200px',
+                            'width'   => '1000px',
                             'add'     => '',
-                            'visible' => false,
                             'edit'    => [
                                 'type'  => 'SelectCondition',
                                 'multi' => true
                             ]
                         ],
                         [
-                            'caption' => ' ',
-                            'name'    => 'SpacerNotification',
-                            'width'   => '200px',
-                            'add'     => '',
-                            'visible' => false,
-                            'edit'    => [
-                                'type' => 'Label'
-                            ]
-                        ],
-                        [
-                            'caption' => 'Meldungstext:',
-                            'name'    => 'LabelMessageText',
-                            'width'   => '200px',
-                            'add'     => '',
-                            'visible' => false,
-                            'edit'    => [
-                                'type' => 'Label',
-                                'bold' => true
-                            ]
-                        ],
-                        [
                             'caption' => 'Auslösender Melder (%1$s)',
                             'name'    => 'TriggeringDetector',
-                            'width'   => '200px',
+                            'width'   => '800px',
                             'add'     => 0,
-                            'visible' => false,
                             'edit'    => [
                                 'type' => 'SelectVariable'
                             ]
@@ -364,9 +346,8 @@ trait BN_Config
                         [
                             'caption' => 'Text der Meldung (maximal 256 Zeichen)',
                             'name'    => 'MessageText',
-                            'width'   => '400px',
+                            'width'   => '800px',
                             'add'     => '%1$s',
-                            'visible' => true,
                             'edit'    => [
                                 'type'      => 'ValidationTextBox',
                                 'multiline' => true
@@ -375,40 +356,17 @@ trait BN_Config
                         [
                             'caption' => 'Zeitstempel',
                             'name'    => 'UseTimestamp',
-                            'width'   => '100px',
+                            'width'   => '140px',
                             'add'     => true,
-                            'visible' => false,
                             'edit'    => [
                                 'type' => 'CheckBox'
                             ]
                         ],
                         [
-                            'caption' => ' ',
-                            'name'    => 'SpacerWebFrontNotification',
-                            'width'   => '200px',
-                            'add'     => '',
-                            'visible' => false,
-                            'edit'    => [
-                                'type' => 'Label'
-                            ]
-                        ],
-                        [
-                            'caption' => 'Nachricht:',
-                            'name'    => 'LabelWebFrontNotification',
-                            'width'   => '200px',
-                            'add'     => '',
-                            'visible' => false,
-                            'edit'    => [
-                                'type' => 'Label',
-                                'bold' => true
-                            ]
-                        ],
-                        [
-                            'caption' => 'WebFront Nachricht',
+                            'caption' => 'Nachricht',
                             'name'    => 'UseWebFrontNotification',
-                            'width'   => '200px',
+                            'width'   => '150px',
                             'add'     => false,
-                            'visible' => false,
                             'edit'    => [
                                 'type' => 'CheckBox'
                             ]
@@ -445,32 +403,10 @@ trait BN_Config
                             ]
                         ],
                         [
-                            'caption' => ' ',
-                            'name'    => 'SpacerWebFrontPushNotification',
-                            'width'   => '200px',
-                            'add'     => '',
-                            'visible' => false,
-                            'edit'    => [
-                                'type' => 'Label'
-                            ]
-                        ],
-                        [
-                            'caption' => 'Push-Nachricht:',
-                            'name'    => 'LabelWebFrontPushNotification',
-                            'width'   => '200px',
-                            'add'     => '',
-                            'visible' => false,
-                            'edit'    => [
-                                'type' => 'Label',
-                                'bold' => true
-                            ]
-                        ],
-                        [
-                            'caption' => 'WebFront Push-Nachricht',
+                            'caption' => 'Push-Nachricht',
                             'name'    => 'UseWebFrontPushNotification',
-                            'width'   => '200px',
+                            'width'   => '150px',
                             'add'     => false,
-                            'visible' => false,
                             'edit'    => [
                                 'type' => 'CheckBox'
                             ]
@@ -588,32 +524,10 @@ trait BN_Config
                             ]
                         ],
                         [
-                            'caption' => ' ',
-                            'name'    => 'SpacerMail',
-                            'width'   => '200px',
-                            'add'     => '',
-                            'visible' => false,
-                            'edit'    => [
-                                'type' => 'Label'
-                            ]
-                        ],
-                        [
-                            'caption' => 'E-Mail:',
-                            'name'    => 'LabelMail',
-                            'width'   => '200px',
-                            'add'     => '',
-                            'visible' => false,
-                            'edit'    => [
-                                'type' => 'Label',
-                                'bold' => true
-                            ]
-                        ],
-                        [
                             'caption' => 'E-Mail',
                             'name'    => 'UseMailer',
-                            'width'   => '200px',
+                            'width'   => '150px',
                             'add'     => false,
-                            'visible' => false,
                             'edit'    => [
                                 'type' => 'CheckBox'
                             ]
@@ -629,32 +543,10 @@ trait BN_Config
                             ]
                         ],
                         [
-                            'caption' => ' ',
-                            'name'    => 'SpacerSMS',
-                            'width'   => '200px',
-                            'add'     => '',
-                            'visible' => false,
-                            'edit'    => [
-                                'type' => 'Label'
-                            ]
-                        ],
-                        [
-                            'caption' => 'SMS:',
-                            'name'    => 'LabelSMS',
-                            'width'   => '200px',
-                            'add'     => '',
-                            'visible' => false,
-                            'edit'    => [
-                                'type' => 'Label',
-                                'bold' => true
-                            ]
-                        ],
-                        [
                             'caption' => 'SMS',
                             'name'    => 'UseSMS',
-                            'width'   => '200px',
+                            'width'   => '150px',
                             'add'     => false,
-                            'visible' => false,
                             'edit'    => [
                                 'type' => 'CheckBox'
                             ]
@@ -670,32 +562,10 @@ trait BN_Config
                             ]
                         ],
                         [
-                            'caption' => ' ',
-                            'name'    => 'SpacerTelegram',
-                            'width'   => '200px',
-                            'add'     => '',
-                            'visible' => false,
-                            'edit'    => [
-                                'type' => 'Label'
-                            ]
-                        ],
-                        [
-                            'caption' => 'Telegram:',
-                            'name'    => 'LabelTelegram',
-                            'width'   => '200px',
-                            'add'     => '',
-                            'visible' => false,
-                            'edit'    => [
-                                'type' => 'Label',
-                                'bold' => true
-                            ]
-                        ],
-                        [
                             'caption' => 'Telegram',
                             'name'    => 'UseTelegram',
-                            'width'   => '200px',
+                            'width'   => '150px',
                             'add'     => false,
-                            'visible' => false,
                             'edit'    => [
                                 'type' => 'CheckBox'
                             ]
@@ -711,7 +581,11 @@ trait BN_Config
                             ]
                         ]
                     ],
-                    'values' => $triggerListValues
+                    'values' => $this->GetRowColors('TriggerList', true)
+                ],
+                [
+                    'type'    => 'Label',
+                    'caption' => 'Anzahl Auslöser: ' . $this->GetElementsAmount('TriggerList')
                 ],
                 [
                     'type'     => 'OpenObjectButton',
@@ -724,49 +598,16 @@ trait BN_Config
         ];
 
         //WebFront notification
-        $webFrontNotificationValues = [];
-        foreach (json_decode($this->ReadPropertyString('WebFrontNotification'), true) as $element) {
-            $rowColor = '#FFC0C0'; //red
-            $id = $element['ID'];
-            if ($id > 1 && @IPS_ObjectExists($id)) {
-                $rowColor = '#C0FFC0'; //light green
-                if (!$element['Use']) {
-                    $rowColor = '#DFDFDF'; //grey
-                }
-            }
-            $webFrontNotificationValues[] = ['rowColor' => $rowColor];
-        }
-
-        //WebFront push notification
-        $webFrontPushNotificationValues = [];
-        foreach (json_decode($this->ReadPropertyString('WebFrontPushNotification'), true) as $element) {
-            $rowColor = '#FFC0C0'; //red
-            $id = $element['ID'];
-            if ($id > 1 && @IPS_ObjectExists($id)) {
-                $rowColor = '#C0FFC0'; //light green
-                if (!$element['Use']) {
-                    $rowColor = '#DFDFDF'; //grey
-                }
-            }
-            $webFrontPushNotificationValues[] = ['rowColor' => $rowColor];
-        }
-
         $form['elements'][] = [
             'type'    => 'ExpansionPanel',
             'name'    => 'Panel3',
             'caption' => 'Nachricht',
             'items'   => [
                 [
-                    'type'    => 'Label',
-                    'caption' => 'Nachricht',
-                    'bold'    => true,
-                    'italic'  => true
-                ],
-                [
                     'type'     => 'List',
                     'name'     => 'WebFrontNotification',
                     'caption'  => 'Nachricht',
-                    'rowCount' => 5,
+                    'rowCount' => $this->GetRowAmount('WebFrontNotification'),
                     'add'      => true,
                     'delete'   => true,
                     'sort'     => [
@@ -786,7 +627,7 @@ trait BN_Config
                         [
                             'name'    => 'ID',
                             'caption' => 'WebFront',
-                            'width'   => '300px',
+                            'width'   => '800px',
                             'add'     => 0,
                             'onClick' => self::MODULE_PREFIX . '_ModifyButton($id, "WebFrontNotificationConfigurationButton", "ID " . $WebFrontNotification["ID"] . " konfigurieren", $WebFrontNotification["ID"]);',
                             'edit'    => [
@@ -795,7 +636,7 @@ trait BN_Config
                             ]
                         ]
                     ],
-                    'values' => $webFrontNotificationValues,
+                    'values' => $this->GetRowColors('WebFrontNotification', false),
                 ],
                 [
                     'type'  => 'RowLayout',
@@ -817,22 +658,21 @@ trait BN_Config
                             'onClick' => self::MODULE_PREFIX . '_CreateInstance($id, "WebFront");'
                         ]
                     ]
-                ],
-                [
-                    'type'    => 'Label',
-                    'caption' => ' '
-                ],
-                [
-                    'type'    => 'Label',
-                    'caption' => 'Push-Nachricht',
-                    'bold'    => true,
-                    'italic'  => true
-                ],
+                ]
+            ]
+        ];
+
+        //WebFront push notification
+        $form['elements'][] = [
+            'type'    => 'ExpansionPanel',
+            'name'    => 'Panel4',
+            'caption' => 'Push-Nachricht',
+            'items'   => [
                 [
                     'type'     => 'List',
                     'name'     => 'WebFrontPushNotification',
                     'caption'  => 'Push-Nachricht',
-                    'rowCount' => 5,
+                    'rowCount' => $this->GetRowAmount('WebFrontPushNotification'),
                     'add'      => true,
                     'delete'   => true,
                     'sort'     => [
@@ -852,7 +692,7 @@ trait BN_Config
                         [
                             'name'    => 'ID',
                             'caption' => 'WebFront',
-                            'width'   => '300px',
+                            'width'   => '800px',
                             'add'     => 0,
                             'onClick' => self::MODULE_PREFIX . '_ModifyButton($id, "WebFrontPushNotificationConfigurationButton", "ID " . $WebFrontPushNotification["ID"] . " konfigurieren", $WebFrontPushNotification["ID"]);',
                             'edit'    => [
@@ -861,7 +701,7 @@ trait BN_Config
                             ]
                         ]
                     ],
-                    'values' => $webFrontPushNotificationValues,
+                    'values' => $this->GetRowColors('WebFrontPushNotification', false),
                 ],
                 [
                     'type'  => 'RowLayout',
@@ -888,35 +728,16 @@ trait BN_Config
         ];
 
         //E-Mail
-        $mailerValues = [];
-        foreach (json_decode($this->ReadPropertyString('Mailer'), true) as $element) {
-            $rowColor = '#FFC0C0'; # red
-            $id = $element['ID'];
-            if ($id > 1 && @IPS_ObjectExists($id)) {
-                $rowColor = '#C0FFC0'; # light green
-                if (!$element['Use']) {
-                    $rowColor = '#DFDFDF'; # grey
-                }
-            }
-            $mailerValues[] = ['rowColor' => $rowColor];
-        }
-
         $form['elements'][] = [
             'type'    => 'ExpansionPanel',
-            'name'    => 'Panel4',
+            'name'    => 'Panel5',
             'caption' => 'E-Mail',
             'items'   => [
-                [
-                    'type'    => 'Label',
-                    'caption' => 'Mailer',
-                    'bold'    => true,
-                    'italic'  => true
-                ],
                 [
                     'type'     => 'List',
                     'name'     => 'Mailer',
                     'caption'  => 'Mailer',
-                    'rowCount' => 5,
+                    'rowCount' => $this->GetRowAmount('Mailer'),
                     'add'      => true,
                     'delete'   => true,
                     'sort'     => [
@@ -936,7 +757,7 @@ trait BN_Config
                         [
                             'name'    => 'ID',
                             'caption' => 'Mailer',
-                            'width'   => '300px',
+                            'width'   => '800px',
                             'add'     => 0,
                             'onClick' => self::MODULE_PREFIX . '_ModifyButton($id, "MailerConfigurationButton", "ID " . $Mailer["ID"] . " konfigurieren", $Mailer["ID"]);',
                             'edit'    => [
@@ -945,7 +766,7 @@ trait BN_Config
                             ]
                         ]
                     ],
-                    'values' => $mailerValues,
+                    'values' => $this->GetRowColors('Mailer', false),
                 ],
                 [
                     'type'  => 'RowLayout',
@@ -971,50 +792,17 @@ trait BN_Config
             ]
         ];
 
-        //SMS NeXXt Mobile
-        $nexxtMobileValues = [];
-        foreach (json_decode($this->ReadPropertyString('NexxtMobile'), true) as $element) {
-            $rowColor = '#FFC0C0'; # red
-            $id = $element['ID'];
-            if ($id > 1 && @IPS_ObjectExists($id)) {
-                $rowColor = '#C0FFC0'; # light green
-                if (!$element['Use']) {
-                    $rowColor = '#DFDFDF'; # grey
-                }
-            }
-            $nexxtMobileValues[] = ['rowColor' => $rowColor];
-        }
-
-        //SMS Sipgate
-        $sipgateValues = [];
-        foreach (json_decode($this->ReadPropertyString('Sipgate'), true) as $element) {
-            $rowColor = '#FFC0C0'; # red
-            $id = $element['ID'];
-            if ($id > 1 && @IPS_ObjectExists($id)) {
-                $rowColor = '#C0FFC0'; # light green
-                if (!$element['Use']) {
-                    $rowColor = '#DFDFDF'; # grey
-                }
-            }
-            $sipgateValues[] = ['rowColor' => $rowColor];
-        }
-
+        //SMS
         $form['elements'][] = [
             'type'    => 'ExpansionPanel',
-            'name'    => 'Panel5',
+            'name'    => 'Panel6',
             'caption' => 'SMS',
             'items'   => [
-                [
-                    'type'    => 'Label',
-                    'caption' => 'Nexxt Mobile',
-                    'bold'    => true,
-                    'italic'  => true
-                ],
                 [
                     'type'     => 'List',
                     'name'     => 'NexxtMobile',
                     'caption'  => 'NexxtMobile',
-                    'rowCount' => 5,
+                    'rowCount' => $this->GetRowAmount('NexxtMobile'),
                     'add'      => true,
                     'delete'   => true,
                     'sort'     => [
@@ -1034,7 +822,7 @@ trait BN_Config
                         [
                             'name'    => 'ID',
                             'caption' => 'NeXXt Mobile',
-                            'width'   => '300px',
+                            'width'   => '800px',
                             'add'     => 0,
                             'onClick' => self::MODULE_PREFIX . '_ModifyButton($id, "NexxtMobileConfigurationButton", "ID " . $NexxtMobile["ID"] . " konfigurieren", $NexxtMobile["ID"]);',
                             'edit'    => [
@@ -1043,7 +831,7 @@ trait BN_Config
                             ]
                         ]
                     ],
-                    'values' => $nexxtMobileValues,
+                    'values' => $this->GetRowColors('NexxtMobile', false),
                 ],
                 [
                     'type'  => 'RowLayout',
@@ -1071,16 +859,10 @@ trait BN_Config
                     'caption' => ' '
                 ],
                 [
-                    'type'    => 'Label',
-                    'caption' => 'Sipgate',
-                    'bold'    => true,
-                    'italic'  => true
-                ],
-                [
                     'type'     => 'List',
                     'name'     => 'Sipgate',
                     'caption'  => 'Sipgate',
-                    'rowCount' => 5,
+                    'rowCount' => $this->GetRowAmount('Sipgate'),
                     'add'      => true,
                     'delete'   => true,
                     'sort'     => [
@@ -1100,7 +882,7 @@ trait BN_Config
                         [
                             'name'    => 'ID',
                             'caption' => 'Sipgate',
-                            'width'   => '300px',
+                            'width'   => '800px',
                             'add'     => 0,
                             'onClick' => self::MODULE_PREFIX . '_ModifyButton($id, "SipgateConfigurationButton", "ID " . $Sipgate["ID"] . " konfigurieren", $Sipgate["ID"]);',
                             'edit'    => [
@@ -1109,7 +891,7 @@ trait BN_Config
                             ]
                         ]
                     ],
-                    'values' => $sipgateValues,
+                    'values' => $this->GetRowColors('Sipgate', false),
                 ],
                 [
                     'type'  => 'RowLayout',
@@ -1136,35 +918,16 @@ trait BN_Config
         ];
 
         //Telegram
-        $telegramValues = [];
-        foreach (json_decode($this->ReadPropertyString('Telegram'), true) as $element) {
-            $rowColor = '#FFC0C0'; # red
-            $id = $element['ID'];
-            if ($id > 1 && @IPS_ObjectExists($id)) {
-                $rowColor = '#C0FFC0'; # light green
-                if (!$element['Use']) {
-                    $rowColor = '#DFDFDF'; # grey
-                }
-            }
-            $telegramValues[] = ['rowColor' => $rowColor];
-        }
-
         $form['elements'][] = [
             'type'    => 'ExpansionPanel',
-            'name'    => 'Panel6',
+            'name'    => 'Panel7',
             'caption' => 'Telegram',
             'items'   => [
-                [
-                    'type'    => 'Label',
-                    'caption' => 'Telegram',
-                    'bold'    => true,
-                    'italic'  => true
-                ],
                 [
                     'type'     => 'List',
                     'name'     => 'Telegram',
                     'caption'  => 'Telegram',
-                    'rowCount' => 5,
+                    'rowCount' => $this->GetRowAmount('Telegram'),
                     'add'      => true,
                     'delete'   => true,
                     'sort'     => [
@@ -1184,7 +947,7 @@ trait BN_Config
                         [
                             'name'    => 'ID',
                             'caption' => 'Telegram Bot',
-                            'width'   => '300px',
+                            'width'   => '800px',
                             'add'     => 0,
                             'onClick' => self::MODULE_PREFIX . '_ModifyButton($id, "TelegramConfigurationButton", "ID " . $Telegram["ID"] . " konfigurieren", $Telegram["ID"]);',
                             'edit'    => [
@@ -1193,7 +956,7 @@ trait BN_Config
                             ]
                         ]
                     ],
-                    'values' => $telegramValues,
+                    'values' => $this->GetRowColors('Telegram', false),
                 ],
                 [
                     'type'  => 'RowLayout',
@@ -1222,7 +985,7 @@ trait BN_Config
         //Visualisation
         $form['elements'][] = [
             'type'    => 'ExpansionPanel',
-            'name'    => 'Panel7',
+            'name'    => 'Panel8',
             'caption' => 'Visualisierung',
             'items'   => [
                 [
@@ -1234,6 +997,12 @@ trait BN_Config
         ];
 
         ########## Actions
+
+        $form['actions'][] =
+            [
+                'type'    => 'Label',
+                'caption' => 'Schaltelemente'
+            ];
 
         //Test center
         $form['actions'][] =
@@ -1250,27 +1019,40 @@ trait BN_Config
         //Registered references
         $registeredReferences = [];
         $references = $this->GetReferenceList();
+        $amountReferences = count($references);
+        if ($amountReferences == 0) {
+            $amountReferences = 3;
+        }
         foreach ($references as $reference) {
             $name = 'Objekt #' . $reference . ' existiert nicht';
+            $location = '';
             $rowColor = '#FFC0C0'; //red
             if (@IPS_ObjectExists($reference)) {
                 $name = IPS_GetName($reference);
+                $location = IPS_GetLocation($reference);
                 $rowColor = '#C0FFC0'; //light green
             }
             $registeredReferences[] = [
-                'ObjectID' => $reference,
-                'Name'     => $name,
-                'rowColor' => $rowColor];
+                'ObjectID'         => $reference,
+                'Name'             => $name,
+                'VariableLocation' => $location,
+                'rowColor'         => $rowColor];
         }
 
         //Registered messages
         $registeredMessages = [];
         $messages = $this->GetMessageList();
+        $amountMessages = count($messages);
+        if ($amountMessages == 0) {
+            $amountMessages = 3;
+        }
         foreach ($messages as $id => $messageID) {
             $name = 'Objekt #' . $id . ' existiert nicht';
+            $location = '';
             $rowColor = '#FFC0C0'; //red
             if (@IPS_ObjectExists($id)) {
                 $name = IPS_GetName($id);
+                $location = IPS_GetLocation($id);
                 $rowColor = '#C0FFC0'; //light green
             }
             switch ($messageID) {
@@ -1288,6 +1070,7 @@ trait BN_Config
             $registeredMessages[] = [
                 'ObjectID'           => $id,
                 'Name'               => $name,
+                'VariableLocation'   => $location,
                 'MessageID'          => $messageID,
                 'MessageDescription' => $messageDescription,
                 'rowColor'           => $rowColor];
@@ -1298,10 +1081,15 @@ trait BN_Config
             'caption' => 'Entwicklerbereich',
             'items'   => [
                 [
+                    'type'    => 'Label',
+                    'caption' => 'Registrierte Referenzen',
+                    'bold'    => true,
+                    'italic'  => true
+                ],
+                [
                     'type'     => 'List',
                     'name'     => 'RegisteredReferences',
-                    'caption'  => 'Registrierte Referenzen',
-                    'rowCount' => 10,
+                    'rowCount' => $amountReferences,
                     'sort'     => [
                         'column'    => 'ObjectID',
                         'direction' => 'ascending'
@@ -1311,13 +1099,17 @@ trait BN_Config
                             'caption' => 'ID',
                             'name'    => 'ObjectID',
                             'width'   => '150px',
-                            'onClick' => self::MODULE_PREFIX . '_ModifyButton($id, "RegisteredReferencesConfigurationButton", "ID " . $RegisteredReferences["ObjectID"] . " aufrufen", $RegisteredReferences["ObjectID"]);'
+                            'onClick' => self::MODULE_PREFIX . '_ModifyButton($id, "RegisteredReferencesConfigurationButton", "ID " . $RegisteredReferences["ObjectID"] . " bearbeiten", $RegisteredReferences["ObjectID"]);'
                         ],
                         [
                             'caption' => 'Name',
                             'name'    => 'Name',
                             'width'   => '300px',
-                            'onClick' => self::MODULE_PREFIX . '_ModifyButton($id, "RegisteredReferencesConfigurationButton", "ID " . $RegisteredReferences["ObjectID"] . " aufrufen", $RegisteredReferences["ObjectID"]);'
+                        ],
+                        [
+                            'caption' => 'Objektbaum',
+                            'name'    => 'VariableLocation',
+                            'width'   => '700px'
                         ]
                     ],
                     'values' => $registeredReferences
@@ -1325,7 +1117,7 @@ trait BN_Config
                 [
                     'type'     => 'OpenObjectButton',
                     'name'     => 'RegisteredReferencesConfigurationButton',
-                    'caption'  => 'Aufrufen',
+                    'caption'  => 'Bearbeiten',
                     'visible'  => false,
                     'objectID' => 0
                 ],
@@ -1334,10 +1126,15 @@ trait BN_Config
                     'caption' => ' '
                 ],
                 [
+                    'type'    => 'Label',
+                    'caption' => 'Registrierte Nachrichten',
+                    'bold'    => true,
+                    'italic'  => true
+                ],
+                [
                     'type'     => 'List',
                     'name'     => 'RegisteredMessages',
-                    'caption'  => 'Registrierte Nachrichten',
-                    'rowCount' => 10,
+                    'rowCount' => $amountMessages,
                     'sort'     => [
                         'column'    => 'ObjectID',
                         'direction' => 'ascending'
@@ -1347,13 +1144,17 @@ trait BN_Config
                             'caption' => 'ID',
                             'name'    => 'ObjectID',
                             'width'   => '150px',
-                            'onClick' => self::MODULE_PREFIX . '_ModifyButton($id, "RegisteredMessagesConfigurationButton", "ID " . $RegisteredMessages["ObjectID"] . " aufrufen", $RegisteredMessages["ObjectID"]);'
+                            'onClick' => self::MODULE_PREFIX . '_ModifyButton($id, "RegisteredMessagesConfigurationButton", "ID " . $RegisteredMessages["ObjectID"] . " bearbeiten", $RegisteredMessages["ObjectID"]);'
                         ],
                         [
                             'caption' => 'Name',
                             'name'    => 'Name',
                             'width'   => '300px',
-                            'onClick' => self::MODULE_PREFIX . '_ModifyButton($id, "RegisteredMessagesConfigurationButton", "ID " . $RegisteredMessages["ObjectID"] . " aufrufen", $RegisteredMessages["ObjectID"]);'
+                        ],
+                        [
+                            'caption' => 'Objektbaum',
+                            'name'    => 'VariableLocation',
+                            'width'   => '700px'
                         ],
                         [
                             'caption' => 'Nachrichten ID',
@@ -1371,7 +1172,7 @@ trait BN_Config
                 [
                     'type'     => 'OpenObjectButton',
                     'name'     => 'RegisteredMessagesConfigurationButton',
-                    'caption'  => 'Aufrufen',
+                    'caption'  => 'Bearbeiten',
                     'visible'  => false,
                     'objectID' => 0
                 ]
@@ -1426,5 +1227,98 @@ trait BN_Config
         ];
 
         return json_encode($form);
+    }
+
+    ######### Private
+
+    /**
+     * Gets the amount of rows of a list.
+     *
+     * @param string $ListName
+     * @return int
+     * @throws Exception
+     */
+    private function GetRowAmount(string $ListName): int
+    {
+        $elements = json_decode($this->ReadPropertyString($ListName), true);
+        $amountRows = count($elements) + 1;
+        if ($amountRows == 1) {
+            $amountRows = 3;
+        }
+        return $amountRows;
+    }
+
+    /**
+     * Gets the color for all rows of a list.
+     *
+     * @param string $ListName
+     * @param bool $CheckConditions
+     * @return array
+     * @throws Exception
+     */
+    private function GetRowColors(string $ListName, bool $CheckConditions): array
+    {
+        $values = [];
+        $elements = json_decode($this->ReadPropertyString($ListName), true);
+        foreach ($elements as $element) {
+            $error = false;
+            $rowColor = '#C0FFC0'; //light green
+            if (!$element['Use']) {
+                $rowColor = '#DFDFDF'; //grey
+            }
+            if ($CheckConditions) {
+                //Primary condition
+                if ($element['PrimaryCondition'] != '') {
+                    $primaryCondition = json_decode($element['PrimaryCondition'], true);
+                    if (array_key_exists(0, $primaryCondition)) {
+                        if (array_key_exists(0, $primaryCondition[0]['rules']['variable'])) {
+                            $id = $primaryCondition[0]['rules']['variable'][0]['variableID'];
+                            if ($id <= 1 || !@IPS_ObjectExists($id)) {
+                                $error = true;
+                            }
+                        }
+                    }
+                }
+                //Secondary condition
+                if ($element['SecondaryCondition'] != '') {
+                    $secondaryConditions = json_decode($element['SecondaryCondition'], true);
+                    if (array_key_exists(0, $secondaryConditions)) {
+                        if (array_key_exists('rules', $secondaryConditions[0])) {
+                            $rules = $secondaryConditions[0]['rules']['variable'];
+                            foreach ($rules as $rule) {
+                                if (array_key_exists('variableID', $rule)) {
+                                    $id = $rule['variableID'];
+                                    if ($id <= 1 || !@IPS_ObjectExists($id)) {
+                                        $error = true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                $id = $element['ID'];
+                if ($id <= 1 || !@IPS_ObjectExists($id)) {
+                    $error = true;
+                }
+            }
+            if ($error) {
+                $rowColor = '#FFC0C0'; //red
+            }
+            $values[] = ['rowColor' => $rowColor];
+        }
+        return $values;
+    }
+
+    /**
+     * Gets the amount of elements of a list.
+     *
+     * @param string $ListName
+     * @return int
+     * @throws Exception
+     */
+    private function GetElementsAmount(string $ListName): int
+    {
+        return count(json_decode($this->ReadPropertyString($ListName), true));
     }
 }

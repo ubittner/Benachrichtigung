@@ -1,14 +1,15 @@
 <?php
 
 /**
- * @project       Benachrichtigung/Benachrichtigung
+ * @project       Benachrichtigung/Benachrichtigung/helper/
  * @file          BN_Notification.php
  * @author        Ulrich Bittner
- * @copyright     2022 Ulrich Bittner
+ * @copyright     2023 Ulrich Bittner
  * @license       https://creativecommons.org/licenses/by-nc-sa/4.0/ CC BY-NC-SA 4.0
  */
 
 /** @noinspection PhpUnhandledExceptionInspection */
+/** @noinspection SpellCheckingInspection */
 
 declare(strict_types=1);
 

@@ -1,15 +1,16 @@
 <?php
 
 /**
- * @project       Benachrichtigung/Benachrichtigung
+ * @project       Benachrichtigung/Benachrichtigung/
  * @file          module.php
  * @author        Ulrich Bittner
- * @copyright     2022 Ulrich Bittner
+ * @copyright     2023 Ulrich Bittner
  * @license       https://creativecommons.org/licenses/by-nc-sa/4.0/ CC BY-NC-SA 4.0
  */
 
 /** @noinspection PhpRedundantMethodOverrideInspection */
 /** @noinspection PhpUnhandledExceptionInspection */
+/** @noinspection SpellCheckingInspection */
 /** @noinspection PhpUnused */
 
 declare(strict_types=1);
@@ -19,7 +20,7 @@ include_once __DIR__ . '/helper/BN_autoload.php';
 class Benachrichtigung extends IPSModule
 {
     //Helper
-    use BN_Config;
+    use BN_ConfigurationForm;
     use BN_Notification;
     use BN_TriggerCondition;
 
