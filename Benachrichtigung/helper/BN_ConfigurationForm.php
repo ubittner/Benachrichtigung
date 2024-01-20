@@ -4,7 +4,7 @@
  * @project       Benachrichtigung/Benachrichtigung/helper/
  * @file          BN_ConfigurationForm.php
  * @author        Ulrich Bittner
- * @copyright     2023 Ulrich Bittner
+ * @copyright     2023, 2024 Ulrich Bittner
  * @license       https://creativecommons.org/licenses/by-nc-sa/4.0/ CC BY-NC-SA 4.0
  */
 
@@ -35,7 +35,7 @@ trait BN_ConfigurationForm
      */
     public function ExpandExpansionPanels(bool $State): void
     {
-        for ($i = 1; $i <= 8; $i++) {
+        for ($i = 1; $i <= 9; $i++) {
             $this->UpdateFormField('Panel' . $i, 'expanded', $State);
         }
     }
@@ -727,10 +727,75 @@ trait BN_ConfigurationForm
             ]
         ];
 
-        //E-Mail
+        //Post notification
         $form['elements'][] = [
             'type'    => 'ExpansionPanel',
             'name'    => 'Panel5',
+            'caption' => 'Post-Nachricht',
+            'items'   => [
+                [
+                    'type'     => 'List',
+                    'name'     => 'PostNotification',
+                    'caption'  => 'Post-Nachricht',
+                    'rowCount' => $this->GetRowAmount('PostNotification'),
+                    'add'      => true,
+                    'delete'   => true,
+                    'sort'     => [
+                        'column'    => 'ID',
+                        'direction' => 'ascending'
+                    ],
+                    'columns' => [
+                        [
+                            'name'    => 'Use',
+                            'caption' => 'Aktiviert',
+                            'width'   => '100px',
+                            'add'     => true,
+                            'edit'    => [
+                                'type' => 'CheckBox'
+                            ]
+                        ],
+                        [
+                            'name'    => 'ID',
+                            'caption' => 'Kachel Visualisierung',
+                            'width'   => '800px',
+                            'add'     => 0,
+                            'onClick' => self::MODULE_PREFIX . '_ModifyButton($id, "PostNotificationConfigurationButton", "ID " . $PostNotification["ID"] . " konfigurieren", $PostNotification["ID"]);',
+                            'edit'    => [
+                                'type'     => 'SelectModule',
+                                'moduleID' => self::TILE_VISUALISATION_MODULE_GUID
+                            ]
+                        ]
+                    ],
+                    'values' => $this->GetRowColors('PostNotification', false),
+                ],
+                [
+                    'type'  => 'RowLayout',
+                    'items' => [
+                        [
+                            'type'     => 'OpenObjectButton',
+                            'name'     => 'PostNotificationConfigurationButton',
+                            'caption'  => 'Konfigurieren',
+                            'visible'  => false,
+                            'objectID' => 0
+                        ],
+                        [
+                            'type'    => 'Label',
+                            'caption' => ' '
+                        ],
+                        [
+                            'type'    => 'Button',
+                            'caption' => 'Neue Instanz erstellen',
+                            'onClick' => self::MODULE_PREFIX . '_CreateInstance($id, "TileVisualisation");'
+                        ]
+                    ]
+                ]
+            ]
+        ];
+
+        //E-Mail
+        $form['elements'][] = [
+            'type'    => 'ExpansionPanel',
+            'name'    => 'Panel6',
             'caption' => 'E-Mail',
             'items'   => [
                 [
@@ -795,7 +860,7 @@ trait BN_ConfigurationForm
         //SMS
         $form['elements'][] = [
             'type'    => 'ExpansionPanel',
-            'name'    => 'Panel6',
+            'name'    => 'Panel7',
             'caption' => 'SMS',
             'items'   => [
                 [
@@ -920,7 +985,7 @@ trait BN_ConfigurationForm
         //Telegram
         $form['elements'][] = [
             'type'    => 'ExpansionPanel',
-            'name'    => 'Panel7',
+            'name'    => 'Panel8',
             'caption' => 'Telegram',
             'items'   => [
                 [
@@ -985,7 +1050,7 @@ trait BN_ConfigurationForm
         //Visualisation
         $form['elements'][] = [
             'type'    => 'ExpansionPanel',
-            'name'    => 'Panel8',
+            'name'    => 'Panel9',
             'caption' => 'Visualisierung',
             'items'   => [
                 [

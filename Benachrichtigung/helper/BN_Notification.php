@@ -4,7 +4,7 @@
  * @project       Benachrichtigung/Benachrichtigung/helper/
  * @file          BN_Notification.php
  * @author        Ulrich Bittner
- * @copyright     2023 Ulrich Bittner
+ * @copyright     2023, 2024 Ulrich Bittner
  * @license       https://creativecommons.org/licenses/by-nc-sa/4.0/ CC BY-NC-SA 4.0
  */
 
@@ -53,6 +53,40 @@ trait BN_Notification
                 continue;
             }
             $scriptText = 'WFC_PushNotification(' . $id . ', "' . $Title . '", "' . $Text . '", "' . $Sound . '", ' . $TargetID . ');';
+            IPS_RunScriptText($scriptText);
+        }
+    }
+
+    /**
+     * Sends a notification to the new tile visualisation and all mobile devices.
+     *
+     * @param string $Title
+     * @param string $Text
+     * @param string $Icon
+     * @param string $Sound
+     * @param int $TargetID
+     * @return void
+     * @throws Exception
+     */
+    public function PostNotification(string $Title, string $Text, string $Icon, string $Sound, int $TargetID = 0): void
+    {
+        $this->SendDebug(__FUNCTION__, 'wird ausgeführt', 0);
+        if ($this->CheckMaintenance()) {
+            return;
+        }
+        //Title length max 32 characters
+        $Title = substr($Title, 0, 32);
+        //Text length max 256 characters
+        $Text = substr($Text, 0, 256);
+        foreach (json_decode($this->ReadPropertyString('PostNotification'), true) as $element) {
+            if (!$element['Use']) {
+                continue;
+            }
+            $id = $element['ID'];
+            if ($id <= 1 || @!IPS_ObjectExists($id)) {
+                continue;
+            }
+            $scriptText = 'VISU_PostNotificationEx(' . $id . ', "' . $Title . '", "' . $Text . '", "' . $Icon . '", "' . $Sound . '", ' . $TargetID . ');';
             IPS_RunScriptText($scriptText);
         }
     }

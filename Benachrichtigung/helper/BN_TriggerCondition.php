@@ -4,7 +4,7 @@
  * @project       Benachrichtigung/Benachrichtigung/helper/
  * @file          BN_TriggerCondition.php
  * @author        Ulrich Bittner
- * @copyright     2023 Ulrich Bittner
+ * @copyright     2023, 2024 Ulrich Bittner
  * @license       https://creativecommons.org/licenses/by-nc-sa/4.0/ CC BY-NC-SA 4.0
  */
 
