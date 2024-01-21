@@ -129,7 +129,7 @@ class Benachrichtigung extends IPSModule
         }
 
         //Services
-        $services = ['WebFrontNotification', 'WebFrontPushNotification', 'Mailer', 'NexxtMobile', 'Sipgate', 'Telegram'];
+        $services = ['WebFrontNotification', 'WebFrontPushNotification', 'PostNotification', 'Mailer', 'NexxtMobile', 'Sipgate', 'Telegram'];
         foreach ($services as $service) {
             $variables = json_decode($this->ReadPropertyString($service), true);
             foreach ($variables as $variable) {
